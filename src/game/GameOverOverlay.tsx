@@ -13,6 +13,7 @@ export default function GameOverOverlay() {
 
   const [rank, setRank] = useState<number | null>(null);
   const [recentScores, setRecentScores] = useState<ScoreRecord[]>([]);
+  const [viewingBoard, setViewingBoard] = useState(false);
 
   const isTimeTrial = mode === 'time-trial';
   const isNewHighScore = score >= highScore && score > 0;
@@ -39,6 +40,21 @@ export default function GameOverOverlay() {
 
   const rankMedal =
     rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+
+  if (viewingBoard) {
+    return (
+      <View className="absolute inset-0 z-50" pointerEvents="box-none">
+        <Pressable
+          onPress={() => setViewingBoard(false)}
+          className="absolute bottom-10 self-center bg-white/95 px-8 py-4 rounded-2xl border-2 border-white shadow-lg active:opacity-80"
+        >
+          <Text className="text-indigo-900 text-lg font-fredoka text-center">
+            Back to Results
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View className="absolute inset-0 z-50 items-center justify-center bg-black/40">
@@ -149,6 +165,14 @@ export default function GameOverOverlay() {
           >
             <Text className="text-white text-xl font-fredoka text-center">
               🔄 Play Again
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setViewingBoard(true)}
+            className="bg-indigo-500/10 py-3.5 rounded-2xl active:bg-indigo-500/20 w-full"
+          >
+            <Text className="text-indigo-600 text-lg font-fredoka text-center">
+              🔍 View Board
             </Text>
           </Pressable>
           <Pressable

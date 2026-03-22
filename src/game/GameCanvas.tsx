@@ -37,7 +37,10 @@ export default function GameCanvas() {
   const mode = useGameStore((s) => s.mode);
   const turnDeadline = useGameStore((s) => s.turnDeadline);
   const timeUp = useGameStore((s) => s.timeUp);
+  const level = useGameStore((s) => s.level);
   const spawnSabotageBlock = useGameStore((s) => s.spawnSabotageBlock);
+  const mirrorBoard = useGameStore((s) => s.mirrorBoard);
+  const rotateBoard = useGameStore((s) => s.rotateBoard);
   const backToMenu = useGameStore((s) => s.backToMenu);
 
   // Load high score on mount
@@ -66,14 +69,32 @@ export default function GameCanvas() {
     return () => clearTimeout(timer);
   }, [mode, turnDeadline, gameOver, timeUp]);
 
-  // Sabotage: spawn a random 1x1 block every 10 seconds (time-trial & crazy modes)
+  // Sabotage: spawn a random 1x1 block every 10 seconds
+  // Time-trial: always active; Crazy: from level 2+
   useEffect(() => {
-    if ((mode !== 'time-trial' && mode !== 'crazy') || !started || gameOver) return;
-    const interval = setInterval(() => {
-      spawnSabotageBlock();
-    }, 10000);
+    if (mode === 'time-trial' && started && !gameOver) {
+      const interval = setInterval(spawnSabotageBlock, 10000);
+      return () => clearInterval(interval);
+    }
+    if (mode === 'crazy' && started && !gameOver && level >= 2) {
+      const interval = setInterval(spawnSabotageBlock, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [mode, started, gameOver, level, spawnSabotageBlock]);
+
+  // Crazy mode: mirror board every 30 seconds (level 3+)
+  useEffect(() => {
+    if (mode !== 'crazy' || !started || gameOver || level < 3) return;
+    const interval = setInterval(mirrorBoard, 30000);
     return () => clearInterval(interval);
-  }, [mode, started, gameOver, spawnSabotageBlock]);
+  }, [mode, started, gameOver, level, mirrorBoard]);
+
+  // Crazy mode: rotate board every 60 seconds (level 4+)
+  useEffect(() => {
+    if (mode !== 'crazy' || !started || gameOver || level < 4) return;
+    const interval = setInterval(rotateBoard, 60000);
+    return () => clearInterval(interval);
+  }, [mode, started, gameOver, level, rotateBoard]);
 
   const boardAnimatedRef = useAnimatedRef<View>();
 

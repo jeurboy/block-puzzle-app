@@ -48,6 +48,7 @@ type GameState = {
   // Special cells with durability: key = "row,col", value = durability (1 or 2)
   specialCells: Map<string, number>;
   lastAction: 'place' | 'clear' | 'gameover' | null;
+  boardEffect: 'mirror' | 'rotate' | null;
   linesClearedThisTurn: number;
   // Time trial
   turnDeadline: number | null;
@@ -64,6 +65,8 @@ type GameState = {
   backToMenu: () => void;
   timeUp: () => void;
   spawnSabotageBlock: () => void;
+  mirrorBoard: () => void;
+  rotateBoard: () => void;
   undo: () => void;
 };
 
@@ -89,6 +92,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   sabotageCells: new Set(),
   specialCells: new Map(),
   lastAction: null,
+  boardEffect: null,
   linesClearedThisTurn: 0,
   turnDeadline: null,
 
@@ -435,6 +439,71 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Clear sabotage animation marker after animation
     setTimeout(() => {
       set({ sabotageCells: new Set() });
+    }, 600);
+  },
+
+  mirrorBoard: () => {
+    const state = get();
+    if (state.mode !== 'crazy' || state.gameOver || state.isAnimating) return;
+
+    // Flip board left-to-right
+    const newBoard = state.board.map((row) => [...row].reverse());
+
+    // Remap special cells
+    const newSpecialCells = new Map<string, number>();
+    for (const [key, dur] of state.specialCells) {
+      const [r, c] = key.split(',').map(Number);
+      newSpecialCells.set(`${r},${BOARD_SIZE - 1 - c}`, dur);
+    }
+
+    const isGameOver = !canAnyBlockBePlaced(newBoard, state.blocks);
+    if (isGameOver) onGameOver(state.score, state.mode, state.level);
+
+    set({
+      board: newBoard,
+      specialCells: newSpecialCells,
+      gameOver: isGameOver,
+      lastAction: isGameOver ? 'gameover' : null,
+      boardEffect: 'mirror',
+    });
+
+    setTimeout(() => {
+      set({ boardEffect: null });
+    }, 600);
+  },
+
+  rotateBoard: () => {
+    const state = get();
+    if (state.mode !== 'crazy' || state.gameOver || state.isAnimating) return;
+
+    // Rotate 90° clockwise: new[c][BOARD_SIZE-1-r] = old[r][c]
+    const newBoard = createEmptyBoard();
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        newBoard[c][BOARD_SIZE - 1 - r] = state.board[r][c];
+      }
+    }
+
+    // Remap special cells
+    const newSpecialCells = new Map<string, number>();
+    for (const [key, dur] of state.specialCells) {
+      const [r, c] = key.split(',').map(Number);
+      newSpecialCells.set(`${c},${BOARD_SIZE - 1 - r}`, dur);
+    }
+
+    const isGameOver = !canAnyBlockBePlaced(newBoard, state.blocks);
+    if (isGameOver) onGameOver(state.score, state.mode, state.level);
+
+    set({
+      board: newBoard,
+      specialCells: newSpecialCells,
+      gameOver: isGameOver,
+      lastAction: isGameOver ? 'gameover' : null,
+      boardEffect: 'rotate',
+    });
+
+    setTimeout(() => {
+      set({ boardEffect: null });
     }, 600);
   },
 

@@ -1,9 +1,17 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useEffect } from 'react';
 import { View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { BOARD_PADDING, CELL_GAP, Shape } from './constants';
 import { useGameStore } from '../store/gameStore';
 import Cell from './Cell';
 import SquirrelBreakOverlay from './SquirrelBreakOverlay';
+import BoardEffectOverlay from './BoardEffectOverlay';
 
 type GhostPosition = {
   row: number;
@@ -23,6 +31,37 @@ const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) =>
   const clearingCells = useGameStore((s) => s.clearingCells);
   const sabotageCells = useGameStore((s) => s.sabotageCells);
   const specialCells = useGameStore((s) => s.specialCells);
+  const boardEffect = useGameStore((s) => s.boardEffect);
+
+  // Board transform animation
+  const scaleY = useSharedValue(1);
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    if (boardEffect === 'mirror') {
+      // Quick horizontal flip effect via scaleY squeeze
+      scaleY.value = withSequence(
+        withTiming(0.92, { duration: 120, easing: Easing.in(Easing.quad) }),
+        withTiming(1.03, { duration: 150, easing: Easing.out(Easing.back(2)) }),
+        withTiming(1, { duration: 100, easing: Easing.inOut(Easing.quad) })
+      );
+    } else if (boardEffect === 'rotate') {
+      // Quick shake rotation effect
+      rotation.value = withSequence(
+        withTiming(-3, { duration: 80, easing: Easing.out(Easing.quad) }),
+        withTiming(3, { duration: 80, easing: Easing.out(Easing.quad) }),
+        withTiming(-2, { duration: 60, easing: Easing.out(Easing.quad) }),
+        withTiming(0, { duration: 80, easing: Easing.inOut(Easing.quad) })
+      );
+    }
+  }, [boardEffect, scaleY, rotation]);
+
+  const boardAnimStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scaleX: scaleY.value },
+      { rotate: `${rotation.value}deg` },
+    ],
+  }));
 
   // Build ghost overlay map: stores { valid, color } for each ghost cell
   const ghostCells = new Map<string, { valid: boolean; color?: string }>();
@@ -45,11 +84,9 @@ const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) =>
       onLayout={onLayout}
       collapsable={false}
       className="self-center rounded-xl bg-white/70 border-4 border-white"
-      style={{
-        padding: BOARD_PADDING,
-      }}
+      style={{ padding: BOARD_PADDING }}
     >
-      <View collapsable={false}>
+      <Animated.View style={boardAnimStyle} collapsable={false}>
         {board.map((row, rowIndex) => (
           <View
             key={rowIndex}
@@ -95,9 +132,10 @@ const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) =>
             })}
           </View>
         ))}
-      </View>
+      </Animated.View>
 
       <SquirrelBreakOverlay clearingCells={clearingCells} />
+      <BoardEffectOverlay />
     </View>
   );
 });
