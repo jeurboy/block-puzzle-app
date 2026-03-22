@@ -3,8 +3,10 @@ import React from 'react';
 import { Image, Platform } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
+import { useGameStore } from '@/src/store/gameStore';
 
 export default function TabLayout() {
+  const started = useGameStore((s) => s.started);
 
   return (
     <Tabs
@@ -13,23 +15,25 @@ export default function TabLayout() {
         tabBarInactiveTintColor: '#cbd5e1', // Soft grayish blue
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 35 : 24,
-          left: 40,
-          right: 40,
-          borderRadius: 40,
-          height: 75,
-          paddingBottom: 0, // Reset default iOS padding since it's floating
-          paddingTop: 8,
-          borderTopWidth: 0,
-          elevation: 15,
-          shadowColor: '#ec4899', // Vibrant pink shadow
-          shadowOffset: { width: 0, height: 12 },
-          shadowOpacity: 0.25,
-          shadowRadius: 24,
-        },
+        tabBarStyle: started
+          ? { display: 'none' as const }
+          : {
+              backgroundColor: '#ffffff',
+              position: 'absolute',
+              bottom: Platform.OS === 'ios' ? 35 : 24,
+              left: 40,
+              right: 40,
+              borderRadius: 40,
+              height: 75,
+              paddingBottom: 0,
+              paddingTop: 8,
+              borderTopWidth: 0,
+              elevation: 15,
+              shadowColor: '#ec4899',
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.25,
+              shadowRadius: 24,
+            },
         tabBarLabelStyle: {
           fontFamily: 'Fredoka-Medium',
           fontSize: 13,

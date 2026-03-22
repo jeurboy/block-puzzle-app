@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoardState, BlockData } from '../game/constants';
+import { BoardState, BlockData, BOARD_SIZE, BLOCK_COLORS } from '../game/constants';
 import {
   createEmptyBoard,
   canPlace,
@@ -10,19 +10,23 @@ import {
   calcScore,
 } from '../utils/boardLogic';
 import { generateBlockSet } from '../utils/shapeFactory';
-import { loadHighScore, saveHighScore } from '../utils/storage';
+import { loadHighScore, saveHighScore, saveScoreRecord } from '../utils/storage';
 
-export type GameMode = 'classic' | 'challenge' | 'time-trial' | 'daily';
+export type GameMode = 'classic' | 'crazy' | 'time-trial' | 'daily';
+
+// Special cell color for sabotage blocks
+const SABOTAGE_COLOR = 'bg-slate-500';
 
 type PreviousState = {
   board: BoardState;
   score: number;
   blocks: BlockData[];
   comboCount: number;
+  specialCells: Map<string, number>;
 };
 
 function blockCountForMode(mode: GameMode): number {
-  return mode === 'challenge' ? 1 : 3;
+  return mode === 'crazy' ? 1 : 3;
 }
 
 type GameState = {
@@ -40,6 +44,9 @@ type GameState = {
   clearingCells: Set<string>;
   isAnimating: boolean;
   justPlacedCells: Set<string>;
+  sabotageCells: Set<string>;
+  // Special cells with durability: key = "row,col", value = durability (1 or 2)
+  specialCells: Map<string, number>;
   lastAction: 'place' | 'clear' | 'gameover' | null;
   linesClearedThisTurn: number;
   // Time trial
@@ -51,13 +58,18 @@ type GameState = {
   finishClearing: () => void;
   restart: () => void;
   startClassic: () => void;
-  startChallenge: () => void;
+  startCrazy: () => void;
   startTimeTrial: () => void;
   startDaily: (rng: () => number) => void;
   backToMenu: () => void;
   timeUp: () => void;
+  spawnSabotageBlock: () => void;
   undo: () => void;
 };
+
+function onGameOver(score: number, mode: GameMode, level: number) {
+  saveScoreRecord({ score, mode, level });
+}
 
 export const useGameStore = create<GameState>((set, get) => ({
   board: createEmptyBoard(),
@@ -74,6 +86,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   clearingCells: new Set(),
   isAnimating: false,
   justPlacedCells: new Set(),
+  sabotageCells: new Set(),
+  specialCells: new Map(),
   lastAction: null,
   linesClearedThisTurn: 0,
   turnDeadline: null,
@@ -99,6 +113,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: state.score,
       blocks: [...state.blocks],
       comboCount: state.comboCount,
+      specialCells: new Map(state.specialCells),
     };
 
     // Place block
@@ -114,6 +129,27 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // Check for line clears
     const { board: clearedBoard, linesCleared, clearedCells } = clearLines(boardAfterPlace);
+
+    // Handle special cells with durability
+    const newSpecialCells = new Map(state.specialCells);
+    const finalBoard = clearedBoard.map((r) => [...r]);
+
+    if (linesCleared > 0) {
+      for (const cellKey of clearedCells) {
+        const durability = newSpecialCells.get(cellKey);
+        if (durability !== undefined) {
+          if (durability >= 2) {
+            // Reduce durability, restore the cell on the board
+            newSpecialCells.set(cellKey, durability - 1);
+            const [r, c] = cellKey.split(',').map(Number);
+            finalBoard[r][c] = SABOTAGE_COLOR;
+          } else {
+            // durability 1 — fully destroyed
+            newSpecialCells.delete(cellKey);
+          }
+        }
+      }
+    }
 
     // Combo
     const newCombo = linesCleared > 0 ? state.comboCount + 1 : 0;
@@ -137,7 +173,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     // Reset turn deadline for time-trial
-    const turnDeadline = state.mode === 'time-trial' ? Date.now() + 5000 : null;
+    const turnDeadline = state.mode === 'time-trial' ? Date.now() + 6000 : null;
 
     if (linesCleared > 0) {
       set({
@@ -151,6 +187,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         clearingCells: clearedCells,
         isAnimating: true,
         justPlacedCells: new Set(),
+        sabotageCells: new Set(),
         lastAction: 'clear',
         linesClearedThisTurn: linesCleared,
         gameOver: false,
@@ -160,19 +197,22 @@ export const useGameStore = create<GameState>((set, get) => ({
       setTimeout(() => {
         const s = get();
         if (!s.isAnimating) return;
-        const gameOver = !canAnyBlockBePlaced(clearedBoard, s.blocks);
+        const gameOver = !canAnyBlockBePlaced(finalBoard, s.blocks);
+        if (gameOver) onGameOver(s.score, s.mode, s.level);
         set({
-          board: clearedBoard,
+          board: finalBoard,
           clearingCells: new Set(),
           isAnimating: false,
+          specialCells: newSpecialCells,
           lastAction: gameOver ? 'gameover' : null,
           gameOver,
         });
       }, 350);
     } else {
-      const isGameOver = !canAnyBlockBePlaced(clearedBoard, nextBlocks);
+      const isGameOver = !canAnyBlockBePlaced(finalBoard, nextBlocks);
+      if (isGameOver) onGameOver(newScore, state.mode, newLevel);
       set({
-        board: clearedBoard,
+        board: finalBoard,
         score: newScore,
         highScore: newHighScore,
         blocks: nextBlocks,
@@ -182,6 +222,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         clearingCells: new Set(),
         isAnimating: false,
         justPlacedCells: new Set(),
+        sabotageCells: new Set(),
+        specialCells: newSpecialCells,
         lastAction: isGameOver ? 'gameover' : 'place',
         linesClearedThisTurn: 0,
         gameOver: isGameOver,
@@ -211,9 +253,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       clearingCells: new Set(),
       isAnimating: false,
       justPlacedCells: new Set(),
+      sabotageCells: new Set(),
+      specialCells: new Map(),
       lastAction: null,
       linesClearedThisTurn: 0,
-      turnDeadline: state.mode === 'time-trial' ? Date.now() + 5000 : null,
+      turnDeadline: state.mode === 'time-trial' ? Date.now() + 6000 : null,
     });
   },
 
@@ -230,6 +274,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       clearingCells: new Set(),
       isAnimating: false,
       justPlacedCells: new Set(),
+      sabotageCells: new Set(),
+      specialCells: new Map(),
       lastAction: null,
       linesClearedThisTurn: 0,
       mode: 'classic',
@@ -238,7 +284,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
-  startChallenge: () => {
+  startCrazy: () => {
     set({
       board: createEmptyBoard(),
       score: 0,
@@ -251,9 +297,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       clearingCells: new Set(),
       isAnimating: false,
       justPlacedCells: new Set(),
+      sabotageCells: new Set(),
+      specialCells: new Map(),
       lastAction: null,
       linesClearedThisTurn: 0,
-      mode: 'challenge',
+      mode: 'crazy',
       started: true,
       turnDeadline: null,
     });
@@ -272,11 +320,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       clearingCells: new Set(),
       isAnimating: false,
       justPlacedCells: new Set(),
+      sabotageCells: new Set(),
+      specialCells: new Map(),
       lastAction: null,
       linesClearedThisTurn: 0,
       mode: 'time-trial',
       started: true,
-      turnDeadline: Date.now() + 5000,
+      turnDeadline: Date.now() + 6000,
     });
   },
 
@@ -293,6 +343,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       clearingCells: new Set(),
       isAnimating: false,
       justPlacedCells: new Set(),
+      sabotageCells: new Set(),
+      specialCells: new Map(),
       lastAction: null,
       linesClearedThisTurn: 0,
       mode: 'daily',
@@ -314,6 +366,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       clearingCells: new Set(),
       isAnimating: false,
       justPlacedCells: new Set(),
+      sabotageCells: new Set(),
+      specialCells: new Map(),
       lastAction: null,
       linesClearedThisTurn: 0,
       mode: 'classic',
@@ -325,11 +379,63 @@ export const useGameStore = create<GameState>((set, get) => ({
   timeUp: () => {
     const state = get();
     if (state.mode !== 'time-trial' || state.gameOver || state.isAnimating) return;
+    onGameOver(state.score, state.mode, state.level);
     set({
       gameOver: true,
       lastAction: 'gameover',
       turnDeadline: null,
     });
+  },
+
+  spawnSabotageBlock: () => {
+    const state = get();
+    if (state.gameOver || state.isAnimating) return;
+    // Only spawn in crazy and time-trial modes
+    if (state.mode !== 'time-trial' && state.mode !== 'crazy') return;
+
+    // Collect all empty cells
+    const emptyCells: [number, number][] = [];
+    for (let r = 0; r < BOARD_SIZE; r++) {
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        if (state.board[r][c] === 0) emptyCells.push([r, c]);
+      }
+    }
+    if (emptyCells.length === 0) return;
+
+    // Pick a random empty cell
+    const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    const newBoard = state.board.map((r) => [...r]);
+    const sabotageKey = `${row},${col}`;
+
+    // In crazy mode: randomly assign durability 1 or 2
+    // In time-trial: always durability 1 (normal sabotage)
+    const newSpecialCells = new Map(state.specialCells);
+    if (state.mode === 'crazy') {
+      const durability = Math.random() < 0.4 ? 2 : 1;
+      newBoard[row][col] = SABOTAGE_COLOR;
+      newSpecialCells.set(sabotageKey, durability);
+    } else {
+      // time-trial: regular colored sabotage
+      const color = BLOCK_COLORS[Math.floor(Math.random() * BLOCK_COLORS.length)];
+      newBoard[row][col] = color;
+    }
+
+    // Check if game is now over
+    const isGameOver = !canAnyBlockBePlaced(newBoard, state.blocks);
+    if (isGameOver) onGameOver(state.score, state.mode, state.level);
+
+    set({
+      board: newBoard,
+      specialCells: newSpecialCells,
+      gameOver: isGameOver,
+      lastAction: isGameOver ? 'gameover' : null,
+      sabotageCells: new Set([sabotageKey]),
+    });
+
+    // Clear sabotage animation marker after animation
+    setTimeout(() => {
+      set({ sabotageCells: new Set() });
+    }, 600);
   },
 
   undo: () => {
@@ -341,13 +447,15 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: state.previousState.score,
       blocks: state.previousState.blocks,
       comboCount: state.previousState.comboCount,
+      specialCells: state.previousState.specialCells,
       undosRemaining: state.undosRemaining - 1,
       previousState: null,
       gameOver: false,
       clearingCells: new Set(),
       justPlacedCells: new Set(),
+      sabotageCells: new Set(),
       lastAction: null,
-      turnDeadline: state.mode === 'time-trial' ? Date.now() + 5000 : null,
+      turnDeadline: state.mode === 'time-trial' ? Date.now() + 6000 : null,
     });
   },
 }));

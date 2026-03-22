@@ -13,6 +13,7 @@ import Mascot from './Mascot';
 import GameOverOverlay from './GameOverOverlay';
 import ModeSelect from './ModeSelect';
 import TimerBar from './TimerBar';
+import LevelUpOverlay from './LevelUpOverlay';
 
 type GhostPosition = {
   row: number;
@@ -36,6 +37,7 @@ export default function GameCanvas() {
   const mode = useGameStore((s) => s.mode);
   const turnDeadline = useGameStore((s) => s.turnDeadline);
   const timeUp = useGameStore((s) => s.timeUp);
+  const spawnSabotageBlock = useGameStore((s) => s.spawnSabotageBlock);
   const backToMenu = useGameStore((s) => s.backToMenu);
 
   // Load high score on mount
@@ -63,6 +65,15 @@ export default function GameCanvas() {
     }, remaining);
     return () => clearTimeout(timer);
   }, [mode, turnDeadline, gameOver, timeUp]);
+
+  // Sabotage: spawn a random 1x1 block every 10 seconds (time-trial & crazy modes)
+  useEffect(() => {
+    if ((mode !== 'time-trial' && mode !== 'crazy') || !started || gameOver) return;
+    const interval = setInterval(() => {
+      spawnSabotageBlock();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [mode, started, gameOver, spawnSabotageBlock]);
 
   const boardAnimatedRef = useAnimatedRef<View>();
 
@@ -166,6 +177,8 @@ export default function GameCanvas() {
         )}
 
         {gameOver && <GameOverOverlay />}
+
+        <LevelUpOverlay />
       </View>
     </ImageBackground>
   );

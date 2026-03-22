@@ -3,8 +3,8 @@ import { View, Text } from 'react-native';
 import { useGameStore, GameMode } from '../store/gameStore';
 
 const MODE_LABELS: Record<GameMode, string> = {
-  classic: 'Normal',
-  challenge: 'Challenge',
+  classic: 'Classic',
+  crazy: 'Crazy',
   'time-trial': 'Time Trial',
   daily: 'Daily',
 };

@@ -7,22 +7,22 @@ import { useGameStore } from '../store/gameStore';
 const MODES = [
   {
     key: 'classic' as const,
-    title: 'Normal',
+    title: 'Classic',
     subtitle: '3 blocks — classic strategy',
     colors: ['#4facfe', '#00f2fe'] as [string, string],
     action: 'startClassic',
   },
   {
-    key: 'challenge' as const,
-    title: 'Challenge',
-    subtitle: '1 block — test your luck',
+    key: 'crazy' as const,
+    title: 'Crazy',
+    subtitle: '1 block + sabotage blocks!',
     colors: ['#ff0844', '#ffb199'] as [string, string],
-    action: 'startChallenge',
+    action: 'startCrazy',
   },
   {
     key: 'time-trial' as const,
     title: 'Time Trial',
-    subtitle: '5 seconds per block',
+    subtitle: '6 seconds per block',
     colors: ['#f6d365', '#fda085'] as [string, string],
     action: 'startTimeTrial',
   },
@@ -30,12 +30,12 @@ const MODES = [
 
 export default function ModeSelect() {
   const startClassic = useGameStore((s) => s.startClassic);
-  const startChallenge = useGameStore((s) => s.startChallenge);
+  const startCrazy = useGameStore((s) => s.startCrazy);
   const startTimeTrial = useGameStore((s) => s.startTimeTrial);
 
   const actions = {
     startClassic,
-    startChallenge,
+    startCrazy,
     startTimeTrial,
   } as const;
 

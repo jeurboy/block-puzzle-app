@@ -21,6 +21,8 @@ type GameBoardProps = {
 const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) => {
   const board = useGameStore((s) => s.board);
   const clearingCells = useGameStore((s) => s.clearingCells);
+  const sabotageCells = useGameStore((s) => s.sabotageCells);
+  const specialCells = useGameStore((s) => s.specialCells);
 
   // Build ghost overlay map: stores { valid, color } for each ghost cell
   const ghostCells = new Map<string, { valid: boolean; color?: string }>();
@@ -77,6 +79,8 @@ const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) =>
               }
 
               const isClearing = clearingCells.has(key);
+              const isSabotage = sabotageCells.has(key);
+              const durability = specialCells.get(key);
 
               return (
                 <Cell
@@ -84,6 +88,8 @@ const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) =>
                   colorClass={colorClass}
                   isClearing={isClearing}
                   isGhost={isGhostCell}
+                  isSabotage={isSabotage}
+                  durability={durability}
                 />
               );
             })}
