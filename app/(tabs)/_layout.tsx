@@ -1,33 +1,88 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { Image, Platform } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#ec4899', // Candy pink tint
+        tabBarInactiveTintColor: '#cbd5e1', // Soft grayish blue
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          position: 'absolute',
+          bottom: Platform.OS === 'ios' ? 35 : 24,
+          left: 40,
+          right: 40,
+          borderRadius: 40,
+          height: 75,
+          paddingBottom: 0, // Reset default iOS padding since it's floating
+          paddingTop: 8,
+          borderTopWidth: 0,
+          elevation: 15,
+          shadowColor: '#ec4899', // Vibrant pink shadow
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.25,
+          shadowRadius: 24,
+        },
+        tabBarLabelStyle: {
+          fontFamily: 'Fredoka-Medium',
+          fontSize: 13,
+          marginTop: 2,
+          marginBottom: 10,
+        }
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Play',
+          tabBarIcon: ({ focused }) => (
+            <Image 
+              source={require('@/assets/images/tab-play.png')} 
+              style={{ 
+                width: 36, 
+                height: 36, 
+                opacity: focused ? 1.0 : 0.4,
+                transform: [{ scale: focused ? 1.15 : 1.0 }]
+              }} 
+              resizeMode="contain"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="daily"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="leaderboard"
+        options={{
+          title: 'Ranks',
+          tabBarIcon: ({ focused }) => (
+            <Image 
+              source={require('@/assets/images/tab-ranks.png')} 
+              style={{ 
+                width: 36, 
+                height: 36, 
+                opacity: focused ? 1.0 : 0.4,
+                transform: [{ scale: focused ? 1.15 : 1.0 }]
+              }} 
+              resizeMode="contain"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          href: null, // Hide from tab bar
         }}
       />
     </Tabs>
