@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useGameStore } from '../store/gameStore';
 
-export default function Mascot() {
+export default function Mascot({ size = 100 }: { size?: number }) {
   const lastAction = useGameStore((s) => s.lastAction);
   const linesClearedThisTurn = useGameStore((s) => s.linesClearedThisTurn);
 
@@ -72,10 +72,10 @@ export default function Mascot() {
   }));
 
   return (
-    <Animated.View style={[{ alignItems: 'center', justifyContent: 'center', width: 100, height: 100 }, animatedStyle]}>
+    <Animated.View style={[{ alignItems: 'center', justifyContent: 'center', width: size, height: size }, animatedStyle]}>
       <Image
         source={require('../../assets/images/mascot.png')}
-        style={{ width: 100, height: 100 }}
+        style={{ width: size, height: size }}
         contentFit="contain"
       />
     </Animated.View>

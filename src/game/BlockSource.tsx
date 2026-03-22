@@ -5,6 +5,7 @@ import DraggableBlock from './DraggableBlock';
 
 type BlockSourceProps = {
   blocks: BlockData[];
+  boardAnimatedRef: any;
   boardLayout: React.RefObject<{ x: number; y: number; width: number; height: number }>;
   onDrop: (blockId: number, row: number, col: number) => boolean;
   onDragMove?: (row: number, col: number, shape: Shape, color?: string) => void;
@@ -14,6 +15,7 @@ type BlockSourceProps = {
 
 export default function BlockSource({
   blocks,
+  boardAnimatedRef,
   boardLayout,
   onDrop,
   onDragMove,
@@ -32,6 +34,7 @@ export default function BlockSource({
             shape={block.shape}
             color={block.color}
             blockId={block.id}
+            boardAnimatedRef={boardAnimatedRef}
             boardLayout={boardLayout}
             onDrop={onDrop}
             onDragMove={onDragMove}

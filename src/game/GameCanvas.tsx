@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useAnimatedRef } from 'react-native-reanimated';
 import { View, ImageBackground, Pressable, Text } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { canPlace } from '../utils/boardLogic';
-import { Shape } from './constants';
+import { Shape, SCREEN_WIDTH } from './constants';
 import { hapticPlace, hapticLineClear, hapticGameOver } from '../hooks/useHaptics';
 import GameBoard from './GameBoard';
 import BlockSource from './BlockSource';
@@ -63,11 +64,11 @@ export default function GameCanvas() {
     return () => clearTimeout(timer);
   }, [mode, turnDeadline, gameOver, timeUp]);
 
-  const boardViewRef = useRef<View>(null);
+  const boardAnimatedRef = useAnimatedRef<View>();
 
   const measureBoard = useCallback(() => {
-    if (boardViewRef.current) {
-      (boardViewRef.current as any).measureInWindow(
+    if (boardAnimatedRef.current) {
+      (boardAnimatedRef.current as any).measureInWindow(
         (x: number, y: number, width: number, height: number) => {
           if (typeof x === 'number' && typeof y === 'number' && x + y > 0) {
             boardLayoutRef.current = { x, y, width, height };
@@ -75,7 +76,7 @@ export default function GameCanvas() {
         }
       );
     }
-  }, []);
+  }, [boardAnimatedRef]);
 
   // Re-measure periodically in case initial measurement was wrong
   useEffect(() => {
@@ -119,7 +120,7 @@ export default function GameCanvas() {
       source={require('../../assets/images/cute_bg.png')}
       style={{ flex: 1 }}
     >
-      <View className="flex-1 justify-center px-4">
+      <View className="flex-1 justify-center px-4" style={{ paddingBottom: 130 }}>
         <Pressable
           onPress={backToMenu}
           className="absolute top-14 left-4 z-30 bg-white/80 rounded-full px-4 py-2 border border-white shadow-sm active:opacity-70"
@@ -129,8 +130,14 @@ export default function GameCanvas() {
 
         <View className="relative z-10">
           <ScoreHeader />
-          <View className="absolute -top-10 right-4 z-20 pointer-events-none">
-            <Mascot />
+          <View
+            className="absolute z-20 pointer-events-none"
+            style={{
+              top: SCREEN_WIDTH > 600 ? -20 : -10,
+              right: SCREEN_WIDTH > 600 ? 8 : 4,
+            }}
+          >
+            <Mascot size={SCREEN_WIDTH > 600 ? 140 : 100} />
           </View>
         </View>
 
@@ -139,7 +146,7 @@ export default function GameCanvas() {
         )}
 
         <GameBoard
-          ref={boardViewRef}
+          ref={boardAnimatedRef}
           ghost={ghost}
           onLayout={measureBoard}
         />
@@ -148,6 +155,7 @@ export default function GameCanvas() {
           <View>
             <BlockSource
               blocks={blocks}
+              boardAnimatedRef={boardAnimatedRef}
               boardLayout={boardLayoutRef}
               onDrop={handleDrop}
               onDragMove={handleDragMove}

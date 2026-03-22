@@ -43,7 +43,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-splash-screen",
       {
         image: "./assets/images/block-bomb.png",
-        resizeMode: "cover",
+        imageWidth: 300,
+        resizeMode: "contain",
         backgroundColor: "#0a1538",
         dark: {
           backgroundColor: "#0a1538",

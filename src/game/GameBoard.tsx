@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import { View } from 'react-native';
-import { BOARD_PADDING, BOARD_SIZE, CELL_GAP, CELL_SIZE, Shape } from './constants';
+import { BOARD_PADDING, CELL_GAP, Shape } from './constants';
 import { useGameStore } from '../store/gameStore';
 import Cell from './Cell';
 import SquirrelBreakOverlay from './SquirrelBreakOverlay';
@@ -47,47 +47,49 @@ const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) =>
         padding: BOARD_PADDING,
       }}
     >
-      {board.map((row, rowIndex) => (
-        <View
-          key={rowIndex}
-          className="flex-row"
-          style={{ gap: CELL_GAP, marginTop: rowIndex > 0 ? CELL_GAP : 0 }}
-        >
-          {row.map((cell, colIndex) => {
-            const key = `${rowIndex},${colIndex}`;
-            const ghostInfo = ghostCells.get(key);
-            const hasGhost = ghostInfo !== undefined;
+      <View collapsable={false}>
+        {board.map((row, rowIndex) => (
+          <View
+            key={rowIndex}
+            className="flex-row"
+            style={{ gap: CELL_GAP, marginTop: rowIndex > 0 ? CELL_GAP : 0 }}
+          >
+            {row.map((cell, colIndex) => {
+              const key = `${rowIndex},${colIndex}`;
+              const ghostInfo = ghostCells.get(key);
+              const hasGhost = ghostInfo !== undefined;
 
-            let colorClass: string;
-            let isGhostCell = false;
-            if (cell !== 0) {
-              colorClass = cell as string;
-            } else if (hasGhost) {
-              isGhostCell = true;
-              if (ghostInfo.valid && ghostInfo.color) {
-                colorClass = ghostInfo.color;
-              } else if (ghostInfo.valid) {
-                colorClass = 'bg-indigo-400/40';
+              let colorClass: string;
+              let isGhostCell = false;
+              if (cell !== 0) {
+                colorClass = cell as string;
+              } else if (hasGhost) {
+                isGhostCell = true;
+                if (ghostInfo.valid && ghostInfo.color) {
+                  colorClass = ghostInfo.color;
+                } else if (ghostInfo.valid) {
+                  colorClass = 'bg-indigo-400/40';
+                } else {
+                  colorClass = 'bg-red-400/40';
+                }
               } else {
-                colorClass = 'bg-red-400/40';
+                colorClass = 'bg-indigo-900/10';
               }
-            } else {
-              colorClass = 'bg-indigo-900/10';
-            }
 
-            const isClearing = clearingCells.has(key);
+              const isClearing = clearingCells.has(key);
 
-            return (
-              <Cell
-                key={colIndex}
-                colorClass={colorClass}
-                isClearing={isClearing}
-                isGhost={isGhostCell}
-              />
-            );
-          })}
-        </View>
-      ))}
+              return (
+                <Cell
+                  key={colIndex}
+                  colorClass={colorClass}
+                  isClearing={isClearing}
+                  isGhost={isGhostCell}
+                />
+              );
+            })}
+          </View>
+        ))}
+      </View>
 
       <SquirrelBreakOverlay clearingCells={clearingCells} />
     </View>

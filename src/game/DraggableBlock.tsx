@@ -3,6 +3,9 @@ import { View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedReaction,
+  useAnimatedRef,
+  measure,
   withSpring,
   withTiming,
   runOnJS,
@@ -17,6 +20,7 @@ type DraggableBlockProps = {
   shape: Shape;
   color: string;
   blockId: number;
+  boardAnimatedRef: any;
   boardLayout: React.RefObject<{ x: number; y: number; width: number; height: number }>;
   onDrop: (blockId: number, row: number, col: number) => boolean;
   onDragMove?: (row: number, col: number, shape: Shape, color?: string) => void;
@@ -28,6 +32,7 @@ export default function DraggableBlock({
   shape,
   color,
   blockId,
+  boardAnimatedRef,
   boardLayout,
   onDrop,
   onDragMove,
@@ -41,38 +46,39 @@ export default function DraggableBlock({
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
 
-  const computeGridPos = useCallback(
-    (absX: number, absY: number) => {
-      const layout = boardLayout.current;
-      if (!layout) return { row: -1, col: -1 };
-      const shapeRows = shape.length;
-      const shapeCols = shape[0].length;
-      // Calculate the visual center of the dragged block
-      // Finger is at absX/absY, block is lifted by DRAG_LIFT_Y
-      const blockCenterX = absX;
-      const blockCenterY = absY + DRAG_LIFT_Y;
-      // Map block center to board-relative coords
-      const relX = blockCenterX - layout.x - BOARD_PADDING;
-      const relY = blockCenterY - layout.y - BOARD_PADDING;
-      // Calculate the top-left cell of the shape based on its center
-      const shapeWidthPx = shapeCols * CELL_STEP - CELL_GAP;
-      const shapeHeightPx = shapeRows * CELL_STEP - CELL_GAP;
-      const topLeftX = relX - shapeWidthPx / 2;
-      const topLeftY = relY - shapeHeightPx / 2;
-      // Snap top-left to nearest cell
-      const col = Math.round(topLeftX / CELL_STEP);
-      const row = Math.round(topLeftY / CELL_STEP);
-      return { row, col };
-    },
-    [boardLayout, shape]
-  );
+  // Shared values to track latest touch position (updated instantly on UI thread)
+  const latestAbsX = useSharedValue(0);
+  const latestAbsY = useSharedValue(0);
+  const isDragging = useSharedValue(false);
 
+  // Offset from finger touch point to block's visual center (captured at drag start)
+  const fingerOffsetX = useSharedValue(0);
+  const fingerOffsetY = useSharedValue(0);
+
+  const blockRef = useAnimatedRef<Animated.View>();
+  
+  // Track measured properties at the start of drag
+  const initialCenterX = useSharedValue(0);
+  const initialCenterY = useSharedValue(0);
+  const layoutX = useSharedValue(0);
+  const layoutY = useSharedValue(0);
+
+  const blockCellSize = CELL_SIZE * 0.8;
+  const shapeRows = shape.length;
+  const shapeCols = shape[0].length;
+  const contentW = shapeCols * blockCellSize + (shapeCols - 1) * CELL_GAP;
+  const contentH = shapeRows * blockCellSize + (shapeRows - 1) * CELL_GAP;
+  const shapeCenterInViewX = 8 + contentW / 2;
+  const shapeCenterInViewY = 8 + contentH / 2;
+
+  const ghostRow = useSharedValue(-20);
+  const ghostCol = useSharedValue(-20);
+
+  // Called on JS thread with the final computed row and col
   const handleDragMove = useCallback(
-    (absX: number, absY: number) => {
-      const { row, col } = computeGridPos(absX, absY);
+    (row: number, col: number) => {
       const shapeRows = shape.length;
       const shapeCols = shape[0].length;
-      // Allow ghost as long as shape overlaps the board at all
       if (
         row >= -(shapeRows - 1) && col >= -(shapeCols - 1) &&
         row < BOARD_SIZE && col < BOARD_SIZE
@@ -80,18 +86,73 @@ export default function DraggableBlock({
         onDragMove?.(row, col, shape, color);
       }
     },
-    [computeGridPos, onDragMove, shape, color]
+    [onDragMove, shape, color]
+  );
+
+  // Use useAnimatedReaction to read the LATEST shared values each frame,
+  // coalescing multiple gesture updates and computing grid pos on UI thread.
+  // This prevents ghost lag when dragging fast.
+  useAnimatedReaction(
+    () => ({
+      x: latestAbsX.value,
+      y: latestAbsY.value,
+      dragging: isDragging.value,
+    }),
+    (current, previous) => {
+      if (
+        current.dragging &&
+        (current.x !== previous?.x || current.y !== previous?.y) &&
+        layoutX.value !== 0
+      ) {
+        // UI Thread Grid Pos Calculation
+        const currentBlockCenterX = initialCenterX.value + translateX.value;
+        const currentBlockCenterY = initialCenterY.value + translateY.value; // translateY includes DRAG_LIFT_Y
+        
+        const relX = currentBlockCenterX - (layoutX.value + 4 + BOARD_PADDING);
+        const relY = currentBlockCenterY - (layoutY.value + 4 + BOARD_PADDING);
+        
+        const shapeWidthPx = shapeCols * CELL_STEP - CELL_GAP;
+        const shapeHeightPx = shapeRows * CELL_STEP - CELL_GAP;
+        
+        const topLeftX = relX - shapeWidthPx / 2;
+        const topLeftY = relY - shapeHeightPx / 2;
+        const col = Math.round(topLeftX / CELL_STEP);
+        const row = Math.round(topLeftY / CELL_STEP);
+
+        if (row !== ghostRow.value || col !== ghostCol.value) {
+          ghostRow.value = row;
+          ghostCol.value = col;
+          runOnJS(handleDragMove)(row, col);
+        }
+      } else if (!current.dragging && previous?.dragging) {
+        ghostRow.value = -20;
+        ghostCol.value = -20;
+      }
+    },
+    [handleDragMove, shape]
   );
 
   const handleDrop = useCallback(
-    (absX: number, absY: number) => {
-      const { row, col } = computeGridPos(absX, absY);
+    () => {
+      // One final JS thread calc using final shared values if needed, 
+      // but ghostRow/ghostCol already hold the correct cell!
+      // However, to be safe, compute from raw gesture absolute:
+      const finalAbsX = initialCenterX.value + translateX.value;
+      const finalAbsY = initialCenterY.value + translateY.value;
+      
+      const relX = finalAbsX - (layoutX.value + 4 + BOARD_PADDING);
+      const relY = finalAbsY - (layoutY.value + 4 + BOARD_PADDING);
+      const shapeWidthPx = shapeCols * CELL_STEP - CELL_GAP;
+      const col = Math.round((relX - shapeWidthPx / 2) / CELL_STEP);
+      const shapeHeightPx = shapeRows * CELL_STEP - CELL_GAP;
+      const row = Math.round((relY - shapeHeightPx / 2) / CELL_STEP);
+
       if (row >= 0 && col >= 0 && row < BOARD_SIZE && col < BOARD_SIZE) {
         onDrop(blockId, row, col);
       }
       onDragEnd?.();
     },
-    [computeGridPos, blockId, onDrop, onDragEnd]
+    [blockId, onDrop, onDragEnd, initialCenterX, initialCenterY, translateX, translateY, layoutX, layoutY, shapeCols, shapeRows]
   );
 
   const handleCancel = useCallback(() => {
@@ -99,24 +160,46 @@ export default function DraggableBlock({
   }, [onDragEnd]);
 
   const handleStart = useCallback(() => {
+    // Only clear old ghost state
+    ghostRow.value = -20;
+    ghostCol.value = -20;
     onDragStart?.();
-  }, [onDragStart]);
+  }, [ghostRow, ghostCol, onDragStart]);
 
   const panGesture = Gesture.Pan()
-    .onStart(() => {
+    .onStart((event) => {
+      // Synchronous measure on UI thread! Free of any Safe Area or header offsets!
+      const blockMeasurement = measure(blockRef);
+      const boardMeasurement = measure(boardAnimatedRef);
+      
+      if (blockMeasurement && boardMeasurement) {
+        layoutX.value = boardMeasurement.pageX;
+        layoutY.value = boardMeasurement.pageY;
+        
+        initialCenterX.value = blockMeasurement.pageX + blockMeasurement.width / 2;
+        initialCenterY.value = blockMeasurement.pageY + blockMeasurement.height / 2;
+      }
+
+      fingerOffsetX.value = event.x - shapeCenterInViewX;
+      fingerOffsetY.value = event.y - shapeCenterInViewY;
+      
       startX.value = translateX.value;
       startY.value = translateY.value;
-      scale.value = withTiming(1.15, { duration: 150 });
+      isDragging.value = true;
+      scale.value = withTiming(1.25, { duration: 150 });
       opacity.value = withTiming(0.75, { duration: 150 });
       runOnJS(handleStart)();
     })
     .onUpdate((event) => {
       translateX.value = startX.value + event.translationX;
       translateY.value = startY.value + event.translationY + DRAG_LIFT_Y;
-      runOnJS(handleDragMove)(event.absoluteX, event.absoluteY);
+      // Store latest position in shared values — picked up by useAnimatedReaction
+      latestAbsX.value = event.absoluteX;
+      latestAbsY.value = event.absoluteY;
     })
-    .onEnd((event) => {
-      runOnJS(handleDrop)(event.absoluteX, event.absoluteY);
+    .onEnd(() => {
+      isDragging.value = false;
+      runOnJS(handleDrop)();
       scale.value = withSpring(1);
       opacity.value = withTiming(1, { duration: 150 });
       translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
@@ -124,6 +207,7 @@ export default function DraggableBlock({
     })
     .onFinalize((_event, success) => {
       if (!success) {
+        isDragging.value = false;
         runOnJS(handleCancel)();
         scale.value = withSpring(1);
         opacity.value = withTiming(1, { duration: 150 });
@@ -141,11 +225,9 @@ export default function DraggableBlock({
     opacity: opacity.value,
   }));
 
-  const blockCellSize = CELL_SIZE * 0.8;
-
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={animatedStyle} className="items-center justify-center p-2">
+      <Animated.View ref={blockRef} style={animatedStyle} className="items-center justify-center p-2">
         {shape.map((row, rowIndex) => (
           <View
             key={rowIndex}

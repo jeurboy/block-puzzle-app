@@ -6,8 +6,9 @@ export const SCREEN_HEIGHT = Dimensions.get('window').height;
 export const BOARD_PADDING = 8;
 export const CELL_GAP = 2;
 
-// Reserve space for header (~160), block tray (~120), tab bar (~80), and padding
-const MAX_BOARD_HEIGHT = SCREEN_HEIGHT - 360;
+// On tablet, cap board to 50% of screen height; on phone, reserve fixed space
+const IS_TABLET = SCREEN_WIDTH > 600;
+const MAX_BOARD_HEIGHT = IS_TABLET ? SCREEN_HEIGHT * 0.5 : SCREEN_HEIGHT - 380;
 export const BOARD_WIDTH = Math.min(SCREEN_WIDTH - 32, MAX_BOARD_HEIGHT);
 export const CELL_SIZE = Math.floor(
   (BOARD_WIDTH - BOARD_PADDING * 2 - CELL_GAP * (BOARD_SIZE - 1)) / BOARD_SIZE
