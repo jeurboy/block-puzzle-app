@@ -5,6 +5,9 @@ import { useGameStore } from '../store/gameStore';
 import { canPlace } from '../utils/boardLogic';
 import { Shape, SCREEN_WIDTH, CELL_SIZE, CELL_GAP } from './constants';
 import { hapticPlace, hapticLineClear, hapticGameOver } from '../hooks/useHaptics';
+import { useSound, useBGM } from '../hooks/useSound';
+import { useSoundStore } from '../store/soundStore';
+import SettingsPanel from './SettingsPanel';
 import GameBoard from './GameBoard';
 import BlockSource from './BlockSource';
 import ScoreHeader from './ScoreHeader';
@@ -42,18 +45,41 @@ export default function GameCanvas() {
   const mirrorBoard = useGameStore((s) => s.mirrorBoard);
   const rotateBoard = useGameStore((s) => s.rotateBoard);
   const backToMenu = useGameStore((s) => s.backToMenu);
+  const comboCount = useGameStore((s) => s.comboCount);
+
+  const { playPlace, playClear, playCombo, playGameOver } = useSound();
+  useBGM(started && !gameOver);
+
+  const loadSoundSettings = useSoundStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    loadSoundSettings();
+  }, [loadSoundSettings]);
 
   // Load high score on mount
   useEffect(() => {
     init();
   }, [init]);
 
-  // Haptic feedback
+  // Haptic & sound feedback
   useEffect(() => {
-    if (lastAction === 'place') hapticPlace();
-    if (lastAction === 'clear') hapticLineClear();
-    if (lastAction === 'gameover') hapticGameOver();
-  }, [lastAction]);
+    if (lastAction === 'place') {
+      hapticPlace();
+      playPlace();
+    }
+    if (lastAction === 'clear') {
+      hapticLineClear();
+      if (comboCount >= 2) {
+        playCombo();
+      } else {
+        playClear();
+      }
+    }
+    if (lastAction === 'gameover') {
+      hapticGameOver();
+      playGameOver();
+    }
+  }, [lastAction, comboCount, playPlace, playClear, playCombo, playGameOver]);
 
   // Time trial timer
   useEffect(() => {
@@ -157,12 +183,17 @@ export default function GameCanvas() {
         bounces={false}
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 130, paddingHorizontal: 16 }}
       >
-        <Pressable
-          onPress={backToMenu}
-          className="absolute top-14 left-4 z-30 bg-white/80 rounded-full px-4 py-2 border border-white shadow-sm active:opacity-70"
-        >
-          <Text className="text-indigo-900 text-sm font-bold">← Menu</Text>
-        </Pressable>
+        <View className="absolute top-14 left-4 z-30">
+          <Pressable
+            onPress={backToMenu}
+            className="bg-white/80 rounded-full px-4 py-2 border border-white shadow-sm active:opacity-70"
+          >
+            <Text className="text-indigo-900 text-sm font-bold">← Menu</Text>
+          </Pressable>
+        </View>
+        <View className="absolute top-14 right-4 z-30">
+          <SettingsPanel />
+        </View>
 
         <View className="relative z-10">
           <ScoreHeader />
