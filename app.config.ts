@@ -39,6 +39,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-asset",
     "expo-audio",
     "expo-font",
+    "expo-image",
+    "expo-web-browser",
     [
       "expo-splash-screen",
       {
@@ -51,6 +53,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
+    [
+      "react-native-google-mobile-ads",
+      {
+        "androidAppId": "ca-app-pub-6423988857193332~8695809556",
+        "iosAppId": "ca-app-pub-6423988857193332~4301535879"
+      }
+    ]
   ],
   experiments: {
     typedRoutes: true,
@@ -59,6 +68,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     appEnv: process.env.APP_ENV ?? "development",
     apiUrl: process.env.API_URL ?? "http://localhost:8080",
+    admobBannerAndroid: process.env.ADMOB_BANNER_ANDROID ?? "",
+    admobBannerIos: process.env.ADMOB_BANNER_IOS ?? "",
     eas: {
       projectId: "f28c5a8b-891b-4fe3-9572-abdc3a52ef81",
     },
