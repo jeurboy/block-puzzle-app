@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAnimatedRef } from 'react-native-reanimated';
-import { View, ImageBackground, Pressable, Text } from 'react-native';
+import { View, ImageBackground, Pressable, Text, ScrollView } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { canPlace } from '../utils/boardLogic';
-import { Shape, SCREEN_WIDTH } from './constants';
+import { Shape, SCREEN_WIDTH, CELL_SIZE, CELL_GAP } from './constants';
 import { hapticPlace, hapticLineClear, hapticGameOver } from '../hooks/useHaptics';
 import GameBoard from './GameBoard';
 import BlockSource from './BlockSource';
@@ -152,7 +152,11 @@ export default function GameCanvas() {
       source={require('../../assets/images/cute_bg.png')}
       style={{ flex: 1 }}
     >
-      <View className="flex-1 justify-center px-4" style={{ paddingBottom: 130 }}>
+      <ScrollView
+        scrollEnabled={false}
+        bounces={false}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 130, paddingHorizontal: 16 }}
+      >
         <Pressable
           onPress={backToMenu}
           className="absolute top-14 left-4 z-30 bg-white/80 rounded-full px-4 py-2 border border-white shadow-sm active:opacity-70"
@@ -184,7 +188,7 @@ export default function GameCanvas() {
         />
 
         {!gameOver && (
-          <View>
+          <View style={{ minHeight: 5 * (CELL_SIZE * 0.8) + 4 * CELL_GAP + 40 }}>
             <BlockSource
               blocks={blocks}
               boardAnimatedRef={boardAnimatedRef}
@@ -200,7 +204,7 @@ export default function GameCanvas() {
         {gameOver && <GameOverOverlay />}
 
         <LevelUpOverlay />
-      </View>
+      </ScrollView>
     </ImageBackground>
   );
 }
