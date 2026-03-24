@@ -166,25 +166,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Remove used block — refill based on mode
     const remainingBlocks = state.blocks.filter((b) => b.id !== blockId);
     const count = blockCountForMode(state.mode);
-    const nextBlocks = remainingBlocks.length === 0
-      ? generateBlockSet(newLevel, Math.random, count)
-      : remainingBlocks;
-
-    // Update high score
-    const newHighScore = Math.max(state.highScore, newScore);
-    if (newHighScore > state.highScore) {
-      saveHighScore(newHighScore);
-    }
 
     // Reset turn deadline for time-trial
     const turnDeadline = state.mode === 'time-trial' ? Date.now() + 6000 : null;
 
     if (linesCleared > 0) {
+      // Immediately show board + clearing effect — no heavy work before this set()
       set({
         board: boardAfterPlace,
         score: newScore,
-        highScore: newHighScore,
-        blocks: nextBlocks,
+        highScore: Math.max(state.highScore, newScore),
         comboCount: newCombo,
         level: newLevel,
         previousState: prevState,
@@ -198,21 +189,37 @@ export const useGameStore = create<GameState>((set, get) => ({
         turnDeadline,
       });
 
+      // Defer heavy work (block generation, game-over check, high score save) to after animation
       setTimeout(() => {
         const s = get();
         if (!s.isAnimating) return;
-        const gameOver = !canAnyBlockBePlaced(finalBoard, s.blocks);
+
+        const nextBlocks = remainingBlocks.length === 0
+          ? generateBlockSet(newLevel, Math.random, count)
+          : remainingBlocks;
+        const newHighScore = Math.max(s.highScore, newScore);
+        if (newHighScore > state.highScore) saveHighScore(newHighScore);
+
+        const gameOver = !canAnyBlockBePlaced(finalBoard, nextBlocks);
         if (gameOver) onGameOver(s.score, s.mode, s.level);
         set({
           board: finalBoard,
+          blocks: nextBlocks,
+          highScore: newHighScore,
           clearingCells: new Set(),
           isAnimating: false,
           specialCells: newSpecialCells,
           lastAction: gameOver ? 'gameover' : null,
           gameOver,
         });
-      }, 350);
+      }, 550);
     } else {
+      const nextBlocks = remainingBlocks.length === 0
+        ? generateBlockSet(newLevel, Math.random, count)
+        : remainingBlocks;
+      const newHighScore = Math.max(state.highScore, newScore);
+      if (newHighScore > state.highScore) saveHighScore(newHighScore);
+
       const isGameOver = !canAnyBlockBePlaced(finalBoard, nextBlocks);
       if (isGameOver) onGameOver(newScore, state.mode, newLevel);
       set({

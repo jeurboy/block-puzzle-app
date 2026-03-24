@@ -132,27 +132,40 @@ export default function DraggableBlock({
     [handleDragMove, shape]
   );
 
-  const handleDrop = useCallback(
-    () => {
-      // One final JS thread calc using final shared values if needed, 
-      // but ghostRow/ghostCol already hold the correct cell!
-      // However, to be safe, compute from raw gesture absolute:
-      const finalAbsX = initialCenterX.value + translateX.value;
-      const finalAbsY = initialCenterY.value + translateY.value;
-      
-      const relX = finalAbsX - (layoutX.value + 4 + BOARD_PADDING);
-      const relY = finalAbsY - (layoutY.value + 4 + BOARD_PADDING);
-      const shapeWidthPx = shapeCols * CELL_STEP - CELL_GAP;
-      const col = Math.round((relX - shapeWidthPx / 2) / CELL_STEP);
-      const shapeHeightPx = shapeRows * CELL_STEP - CELL_GAP;
-      const row = Math.round((relY - shapeHeightPx / 2) / CELL_STEP);
+  // Track whether the drop was successful so onEnd can decide animation
+  const dropSuccess = useSharedValue(false);
 
-      if (row >= 0 && col >= 0 && row < BOARD_SIZE && col < BOARD_SIZE) {
-        onDrop(blockId, row, col);
+  const onDropResult = useCallback(
+    (placed: boolean) => {
+      dropSuccess.value = placed;
+      if (placed) {
+        // Hide block + snap to origin instantly (board already has the block)
+        opacity.value = 0;
+        translateX.value = 0;
+        translateY.value = 0;
+        scale.value = 1;
+      } else {
+        // Block not placed — spring back visibly
+        scale.value = withSpring(1);
+        translateX.value = withSpring(0, { damping: 12, stiffness: 120 }, () => {
+          opacity.value = withTiming(1, { duration: 100 });
+        });
+        translateY.value = withSpring(0, { damping: 12, stiffness: 120 });
       }
+    },
+    [dropSuccess, opacity, scale, translateX, translateY]
+  );
+
+  const handleDrop = useCallback(
+    (row: number, col: number) => {
+      let placed = false;
+      if (row >= 0 && col >= 0 && row < BOARD_SIZE && col < BOARD_SIZE) {
+        placed = onDrop(blockId, row, col);
+      }
+      onDropResult(placed);
       onDragEnd?.();
     },
-    [blockId, onDrop, onDragEnd, initialCenterX, initialCenterY, translateX, translateY, layoutX, layoutY, shapeCols, shapeRows]
+    [blockId, onDrop, onDragEnd, onDropResult]
   );
 
   const handleCancel = useCallback(() => {
@@ -199,20 +212,23 @@ export default function DraggableBlock({
     })
     .onEnd(() => {
       isDragging.value = false;
-      runOnJS(handleDrop)();
-      scale.value = withSpring(1);
-      opacity.value = withTiming(1, { duration: 150 });
-      translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
-      translateY.value = withSpring(0, { damping: 15, stiffness: 150 });
+      // Don't hide here — let onDropResult hide after board updates
+      // Use pre-computed grid position from UI thread — no recalculation needed
+      const row = ghostRow.value;
+      const col = ghostCol.value;
+      runOnJS(handleDrop)(row, col);
     })
     .onFinalize((_event, success) => {
       if (!success) {
         isDragging.value = false;
         runOnJS(handleCancel)();
+        // Cancelled — spring back visibly
         scale.value = withSpring(1);
-        opacity.value = withTiming(1, { duration: 150 });
-        translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
-        translateY.value = withSpring(0, { damping: 15, stiffness: 150 });
+        opacity.value = withTiming(0.8, { duration: 50 });
+        translateX.value = withSpring(0, { damping: 12, stiffness: 120 }, () => {
+          opacity.value = withTiming(1, { duration: 100 });
+        });
+        translateY.value = withSpring(0, { damping: 12, stiffness: 120 });
       }
     });
 

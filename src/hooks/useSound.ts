@@ -15,6 +15,13 @@ export function useSound() {
   const comboPlayer = useAudioPlayer(comboSfx);
   const gameoverPlayer = useAudioPlayer(gameoverSfx);
 
+  useEffect(() => {
+    placePlayer.volume = 1.0;
+    clearPlayer.volume = 1.0;
+    comboPlayer.volume = 1.0;
+    gameoverPlayer.volume = 1.0;
+  }, [placePlayer, clearPlayer, comboPlayer, gameoverPlayer]);
+
   const playPlace = useCallback(() => {
     if (!sfxEnabled) return;
     placePlayer.seekTo(0);
@@ -50,7 +57,7 @@ export function useBGM(shouldPlay: boolean) {
 
   useEffect(() => {
     bgmPlayer.loop = true;
-    bgmPlayer.volume = 0.3;
+    bgmPlayer.volume = 0.8;
   }, [bgmPlayer]);
 
   useEffect(() => {

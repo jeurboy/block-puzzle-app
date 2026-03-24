@@ -26,12 +26,12 @@ function Cell({ colorClass, isClearing, isGhost, isSabotage, durability }: CellP
   useEffect(() => {
     if (isClearing) {
       scale.value = withSequence(
-        withTiming(1.15, { duration: 100, easing: Easing.out(Easing.quad) }),
-        withTiming(0, { duration: 250, easing: Easing.in(Easing.quad) })
+        withTiming(1.3, { duration: 120, easing: Easing.out(Easing.back(2)) }),
+        withTiming(1.6, { duration: 300, easing: Easing.out(Easing.quad) })
       );
       cellOpacity.value = withSequence(
-        withTiming(1, { duration: 100 }),
-        withTiming(0, { duration: 250 })
+        withTiming(1, { duration: 120 }),
+        withTiming(0, { duration: 300, easing: Easing.in(Easing.quad) })
       );
     } else if (isSabotage) {
       // Pop-in animation for sabotage blocks

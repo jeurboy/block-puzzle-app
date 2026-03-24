@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "Block Bomb",
   slug: "block-puzzle-app",
-  version: "1.0.0",
+  version: "1.1.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "blockbomb",
@@ -39,6 +39,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-asset",
     "expo-audio",
     "expo-font",
+    "expo-image",
+    "expo-web-browser",
     [
       "expo-splash-screen",
       {

@@ -1,7 +1,7 @@
 from PIL import Image
 
-input_path = "/Users/pornprasithmahasith/.gemini/antigravity/brain/4b98e049-4639-4331-bb3f-598708689c25/play_feature_graphic_1774120631392.png"
-output_path = "play_store_feature_graphic.png"
+input_path = "/Users/pornprasithmahasith/.gemini/antigravity/brain/f25937e5-3b76-40f0-9f96-239d6a338118/play_feature_graphic_text_1774275758395.png"
+output_path = "/Volumes/Dock/Documents/workspace-dock/block-puzzle/block-puzzle-app/assets/images/feature_graphic.png"
 
 img = Image.open(input_path)
 target_aspect = 1024 / 500

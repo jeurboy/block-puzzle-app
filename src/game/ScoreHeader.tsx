@@ -17,7 +17,7 @@ export default function ScoreHeader() {
   const mode = useGameStore((s) => s.mode);
 
   return (
-    <View className="items-center mb-6">
+    <View className="items-center mb-4" style={{ marginTop: 80 }}>
       <View className="bg-white/85 px-8 py-5 rounded-[32px] items-center border-[4px] border-white shadow-sm w-full max-w-[320px]">
         <Text className="text-indigo-900 text-4xl font-fredoka tracking-wide">
           Block Puzzle

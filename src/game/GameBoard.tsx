@@ -10,7 +10,6 @@ import Animated, {
 import { BOARD_PADDING, CELL_GAP, Shape } from './constants';
 import { useGameStore } from '../store/gameStore';
 import Cell from './Cell';
-import SquirrelBreakOverlay from './SquirrelBreakOverlay';
 import BoardEffectOverlay from './BoardEffectOverlay';
 
 type GhostPosition = {
@@ -134,7 +133,6 @@ const GameBoard = forwardRef<View, GameBoardProps>(({ ghost, onLayout }, ref) =>
         ))}
       </Animated.View>
 
-      <SquirrelBreakOverlay clearingCells={clearingCells} />
       <BoardEffectOverlay />
     </View>
   );

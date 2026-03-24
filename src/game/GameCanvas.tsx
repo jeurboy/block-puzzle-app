@@ -181,7 +181,7 @@ export default function GameCanvas() {
       <ScrollView
         scrollEnabled={false}
         bounces={false}
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 130, paddingHorizontal: 16 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 130, paddingTop: 20, paddingHorizontal: 16 }}
       >
         <View className="absolute top-14 left-4 z-30">
           <Pressable
@@ -200,7 +200,7 @@ export default function GameCanvas() {
           <View
             className="absolute z-20 pointer-events-none"
             style={{
-              top: SCREEN_WIDTH > 600 ? -20 : -10,
+              top: SCREEN_WIDTH > 600 ? -20 : 0,
               right: SCREEN_WIDTH > 600 ? 8 : 4,
             }}
           >
