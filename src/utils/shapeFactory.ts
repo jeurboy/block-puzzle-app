@@ -5,6 +5,7 @@ import {
   SHAPES_TIER_1,
   SHAPES_TIER_2,
   SHAPES_TIER_3,
+  SHAPES_TIER_4,
   ALL_SHAPES,
 } from '../game/constants';
 
@@ -12,6 +13,7 @@ type RngFn = () => number;
 
 function getShapesForLevel(level: number): Shape[] {
   if (level <= 2) return [...SHAPES_TIER_1, ...SHAPES_TIER_2];
+  if (level === 3) return [...SHAPES_TIER_1, ...SHAPES_TIER_2, ...SHAPES_TIER_3];
   return ALL_SHAPES;
 }
 
