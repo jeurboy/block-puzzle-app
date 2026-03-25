@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useGameStore, GameMode } from '../store/gameStore';
+import { getLevelProgress } from '../utils/boardLogic';
+import { APP_NAME } from './constants';
 
 const MODE_LABELS: Record<GameMode, string> = {
   classic: 'Classic',
@@ -20,7 +22,7 @@ export default function ScoreHeader() {
     <View className="items-center mb-2" style={{ marginTop: 80 }}>
       <View className="bg-white/85 px-6 py-2 rounded-[24px] items-center border-[4px] border-white shadow-sm w-full max-w-[320px]">
         <Text className="text-indigo-900 text-2xl font-fredoka tracking-wide">
-          Block Bomb
+          {APP_NAME}
         </Text>
         <Text className="text-indigo-400/80 text-[9px] font-bold tracking-widest mb-0.5 uppercase">
           {MODE_LABELS[mode]}
@@ -40,6 +42,15 @@ export default function ScoreHeader() {
           <View className="items-center">
             <Text className="text-slate-400 text-[9px] font-bold tracking-widest">LV</Text>
             <Text className="text-sky-400 text-xl font-fredoka">{level}</Text>
+          </View>
+        </View>
+
+        <View className="w-full px-2 mt-1.5">
+          <View className="w-full h-[10px] bg-indigo-100 rounded-full overflow-hidden">
+            <View
+              className="h-full bg-sky-400 rounded-full"
+              style={{ width: `${getLevelProgress(score) * 100}%` }}
+            />
           </View>
         </View>
 

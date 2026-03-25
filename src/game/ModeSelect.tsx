@@ -3,6 +3,7 @@ import { View, Text, Pressable, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useGameStore } from '../store/gameStore';
+import { APP_NAME } from './constants';
 
 const MODES = [
   {
@@ -44,21 +45,21 @@ export default function ModeSelect() {
       source={require('../../assets/images/cute_bg.png')}
       style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}
     >
-      <View className="items-center justify-center mb-10">
+      <View className="items-center justify-center mb-6" style={{ marginTop: -40 }}>
         <Image
           source={require('../../assets/images/mascot.png')}
-          style={{ width: 140, height: 140, marginBottom: 16 }}
+          style={{ width: 120, height: 120, marginBottom: 10 }}
           contentFit="contain"
         />
-        <Text className="text-indigo-900 text-5xl font-fredoka tracking-wide text-center mb-2">
-          Block Puzzle
+        <Text className="text-indigo-900 text-3xl font-fredoka tracking-wide text-center mb-1">
+          {APP_NAME}
         </Text>
-        <Text className="text-slate-500 text-lg font-medium text-center">
+        <Text className="text-slate-500 text-base font-medium text-center">
           Choose a mode to play
         </Text>
       </View>
 
-      <View style={{ gap: 16, paddingHorizontal: 4 }}>
+      <View style={{ gap: 12, paddingHorizontal: 4 }}>
         {MODES.map((mode) => (
           <Pressable
             key={mode.key}
@@ -70,7 +71,7 @@ export default function ModeSelect() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{
-                paddingVertical: 24,
+                paddingVertical: 16,
                 paddingHorizontal: 24,
                 borderRadius: 24,
                 shadowColor: mode.colors[0],

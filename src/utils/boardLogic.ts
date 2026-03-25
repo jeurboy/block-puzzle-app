@@ -1,5 +1,26 @@
 import { BOARD_SIZE, BoardState, CellValue, Shape } from '../game/constants';
 
+// Score needed to reach each level: lv1→2: 150, lv2→3: 200, lv3→4: 250, lv4+: 250 each
+function scoreForLevel(lv: number): number {
+  if (lv <= 1) return 0;
+  if (lv === 2) return 150;
+  if (lv === 3) return 350;
+  return 600 + (lv - 4) * 250;
+}
+
+export function getLevelFromScore(score: number): number {
+  let lv = 1;
+  while (score >= scoreForLevel(lv + 1)) lv++;
+  return lv;
+}
+
+export function getLevelProgress(score: number): number {
+  const lv = getLevelFromScore(score);
+  const current = scoreForLevel(lv);
+  const next = scoreForLevel(lv + 1);
+  return (score - current) / (next - current);
+}
+
 export function createEmptyBoard(): BoardState {
   return Array.from({ length: BOARD_SIZE }, () =>
     Array.from({ length: BOARD_SIZE }, () => 0 as CellValue)

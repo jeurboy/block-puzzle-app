@@ -8,6 +8,7 @@ import {
   canAnyBlockBePlaced,
   countCells,
   calcScore,
+  getLevelFromScore,
 } from '../utils/boardLogic';
 import { generateBlockSet } from '../utils/shapeFactory';
 import { loadHighScore, saveHighScore, saveScoreRecord } from '../utils/storage';
@@ -161,7 +162,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Score
     const points = calcScore(countCells(block.shape), linesCleared, newCombo);
     const newScore = state.score + points;
-    const newLevel = Math.floor(newScore / 200) + 1;
+    const newLevel = getLevelFromScore(newScore);
 
     // Remove used block — refill based on mode
     const remainingBlocks = state.blocks.filter((b) => b.id !== blockId);
