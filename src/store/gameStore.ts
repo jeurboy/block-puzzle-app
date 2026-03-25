@@ -26,8 +26,9 @@ type PreviousState = {
   specialCells: Map<string, number>;
 };
 
-function blockCountForMode(mode: GameMode): number {
-  return mode === 'crazy' ? 1 : 3;
+function blockCountForMode(mode: GameMode, level: number = 1): number {
+  if (mode === 'crazy') return level >= 2 ? 2 : 1;
+  return 3;
 }
 
 type GameState = {
@@ -166,7 +167,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // Remove used block — refill based on mode
     const remainingBlocks = state.blocks.filter((b) => b.id !== blockId);
-    const count = blockCountForMode(state.mode);
+    const count = blockCountForMode(state.mode, newLevel);
 
     // Reset turn deadline for time-trial
     const turnDeadline = state.mode === 'time-trial' ? Date.now() + 6000 : null;
@@ -195,8 +196,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         const s = get();
         if (!s.isAnimating) return;
 
-        const nextBlocks = remainingBlocks.length === 0
-          ? generateBlockSet(newLevel, Math.random, count)
+        // Crazy: top up to count every turn; others: refill only when all used
+        const needRefill = state.mode === 'crazy'
+          ? count - remainingBlocks.length
+          : remainingBlocks.length === 0 ? count : 0;
+        const nextBlocks = needRefill > 0
+          ? [...remainingBlocks, ...generateBlockSet(newLevel, Math.random, needRefill)]
           : remainingBlocks;
         const newHighScore = Math.max(s.highScore, newScore);
         if (newHighScore > state.highScore) saveHighScore(newHighScore);
@@ -215,8 +220,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
       }, 550);
     } else {
-      const nextBlocks = remainingBlocks.length === 0
-        ? generateBlockSet(newLevel, Math.random, count)
+      // Crazy: top up to count every turn; others: refill only when all used
+      const needRefill = state.mode === 'crazy'
+        ? count - remainingBlocks.length
+        : remainingBlocks.length === 0 ? count : 0;
+      const nextBlocks = needRefill > 0
+        ? [...remainingBlocks, ...generateBlockSet(newLevel, Math.random, needRefill)]
         : remainingBlocks;
       const newHighScore = Math.max(state.highScore, newScore);
       if (newHighScore > state.highScore) saveHighScore(newHighScore);
@@ -252,7 +261,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   restart: () => {
     const state = get();
-    const count = blockCountForMode(state.mode);
+    const count = blockCountForMode(state.mode, 1);
     set({
       board: createEmptyBoard(),
       score: 0,
