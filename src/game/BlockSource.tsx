@@ -23,8 +23,8 @@ export default function BlockSource({
   onDragStart,
 }: BlockSourceProps) {
   return (
-    <View className="mt-6 items-center">
-      <Text className="text-zinc-400 text-xs mb-3 font-medium tracking-widest">
+    <View className="mt-1 items-center">
+      <Text className="text-zinc-400 text-xs mb-2 font-medium tracking-widest">
         DRAG TO PLACE
       </Text>
       <View className="flex-row justify-center items-center" style={{ gap: 16 }}>
