@@ -10,7 +10,7 @@ import {
   calcScore,
   getLevelFromScore,
 } from '../utils/boardLogic';
-import { generateBlockSet } from '../utils/shapeFactory';
+import { generateBlockSet, generateSolvableBlockSet } from '../utils/shapeFactory';
 import { loadHighScore, saveHighScore, saveScoreRecord } from '../utils/storage';
 
 export type GameMode = 'classic' | 'crazy' | 'time-trial' | 'daily';
@@ -29,6 +29,21 @@ type PreviousState = {
 function blockCountForMode(mode: GameMode, level: number = 1): number {
   if (mode === 'crazy') return level >= 2 ? 2 : 1;
   return 3;
+}
+
+// Classic mode guarantees the spawned set has a winning placement order, so the
+// player can never be handed a dead set. Other modes use the plain random set.
+function generateBlocksForMode(
+  mode: GameMode,
+  board: BoardState,
+  level: number,
+  rng: () => number,
+  count: number
+): BlockData[] {
+  if (mode === 'classic' || mode === 'time-trial') {
+    return generateSolvableBlockSet(board, level, rng, count);
+  }
+  return generateBlockSet(level, rng, count);
 }
 
 type GameState = {
@@ -201,7 +216,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           ? count - remainingBlocks.length
           : remainingBlocks.length === 0 ? count : 0;
         const nextBlocks = needRefill > 0
-          ? [...remainingBlocks, ...generateBlockSet(newLevel, Math.random, needRefill)]
+          ? [...remainingBlocks, ...generateBlocksForMode(state.mode, finalBoard, newLevel, Math.random, needRefill)]
           : remainingBlocks;
         const newHighScore = Math.max(s.highScore, newScore);
         if (newHighScore > state.highScore) saveHighScore(newHighScore);
@@ -225,7 +240,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         ? count - remainingBlocks.length
         : remainingBlocks.length === 0 ? count : 0;
       const nextBlocks = needRefill > 0
-        ? [...remainingBlocks, ...generateBlockSet(newLevel, Math.random, needRefill)]
+        ? [...remainingBlocks, ...generateBlocksForMode(state.mode, finalBoard, newLevel, Math.random, needRefill)]
         : remainingBlocks;
       const newHighScore = Math.max(state.highScore, newScore);
       if (newHighScore > state.highScore) saveHighScore(newHighScore);
@@ -262,10 +277,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   restart: () => {
     const state = get();
     const count = blockCountForMode(state.mode, 1);
+    const freshBoard = createEmptyBoard();
     set({
-      board: createEmptyBoard(),
+      board: freshBoard,
       score: 0,
-      blocks: generateBlockSet(1, Math.random, count),
+      blocks: generateBlocksForMode(state.mode, freshBoard, 1, Math.random, count),
       gameOver: false,
       comboCount: 0,
       level: 1,
@@ -283,10 +299,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   startClassic: () => {
+    const freshBoard = createEmptyBoard();
     set({
-      board: createEmptyBoard(),
+      board: freshBoard,
       score: 0,
-      blocks: generateBlockSet(1, Math.random, 3),
+      blocks: generateSolvableBlockSet(freshBoard, 1, Math.random, 3),
       gameOver: false,
       comboCount: 0,
       level: 1,
@@ -329,10 +346,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   startTimeTrial: () => {
+    const freshBoard = createEmptyBoard();
     set({
-      board: createEmptyBoard(),
+      board: freshBoard,
       score: 0,
-      blocks: generateBlockSet(1, Math.random, 3),
+      blocks: generateSolvableBlockSet(freshBoard, 1, Math.random, 3),
       gameOver: false,
       comboCount: 0,
       level: 1,

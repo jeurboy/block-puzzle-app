@@ -1,7 +1,47 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable, Image } from 'react-native';
+import { router } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
 import { getScoreRank, loadScoreHistory, ScoreRecord } from '../utils/storage';
+
+const TROPHY_IMG = require('../../assets/images/gameover-trophy.png');
+
+type RankBadgeProps = { rank: number; size?: number };
+function RankBadge({ rank, size = 28 }: RankBadgeProps) {
+  const palette =
+    rank === 1
+      ? { bg: '#FBBF24', ring: '#F59E0B', text: '#78350F' } // gold
+      : rank === 2
+      ? { bg: '#E5E7EB', ring: '#9CA3AF', text: '#374151' } // silver
+      : rank === 3
+      ? { bg: '#FCA17D', ring: '#C2410C', text: '#7C2D12' } // bronze
+      : { bg: '#E0E7FF', ring: '#A5B4FC', text: '#4338CA' }; // default indigo
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: palette.bg,
+        borderWidth: 2,
+        borderColor: palette.ring,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Text
+        style={{
+          color: palette.text,
+          fontSize: size * 0.45,
+          fontWeight: '900',
+        }}
+      >
+        {rank}
+      </Text>
+    </View>
+  );
+}
 
 export default function GameOverOverlay() {
   const score = useGameStore((s) => s.score);
@@ -38,9 +78,6 @@ export default function GameOverOverlay() {
     daily: 'Daily',
   };
 
-  const rankMedal =
-    rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
-
   if (viewingBoard) {
     return (
       <View className="absolute inset-0 z-50" pointerEvents="box-none">
@@ -57,99 +94,148 @@ export default function GameOverOverlay() {
   }
 
   return (
-    <View className="absolute inset-0 z-50 items-center justify-center bg-black/40">
-      <View className="bg-white/95 rounded-3xl items-center shadow-2xl border-2 border-white w-[88%] max-w-sm overflow-hidden">
-        {/* Top banner */}
-        <View className="w-full bg-indigo-600 pt-6 pb-5 items-center">
-          <Text style={{ fontSize: isNewHighScore ? 48 : 40 }}>
-            {isNewHighScore ? '🎉' : isTimeTrial ? '⏱️' : '💎'}
+    <View className="absolute inset-0 z-50 items-center justify-center bg-black/50 px-5">
+      <View
+        className="bg-white rounded-[28px] w-full max-w-sm shadow-2xl"
+        style={{ overflow: 'visible' }}
+      >
+        {/* Hero banner — curved bottom via large radius */}
+        <View
+          className="bg-indigo-600 items-center pt-8 pb-10"
+          style={{
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            borderBottomLeftRadius: 60,
+            borderBottomRightRadius: 60,
+          }}
+        >
+          <Image
+            source={TROPHY_IMG}
+            style={{ width: 96, height: 96 }}
+            resizeMode="contain"
+          />
+          <Text className="text-white text-3xl font-fredoka mt-2 tracking-wide">
+            {isTimeTrial ? "Time's Up" : 'Game Over'}
           </Text>
-          <Text className="text-white text-3xl font-fredoka mt-1">
-            {isTimeTrial ? "Time's Up!" : 'Game Over!'}
-          </Text>
-          {isNewHighScore && (
-            <View className="bg-amber-400 px-4 py-1 rounded-full mt-2">
-              <Text className="text-amber-900 text-xs font-bold">
-                ✨ NEW HIGH SCORE ✨
-              </Text>
+        </View>
+
+        {/* Ribbon — NEW HIGH SCORE */}
+        {isNewHighScore && (
+          <View className="items-center" style={{ marginTop: -16 }}>
+            <View className="flex-row items-center">
+              <View
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderTopWidth: 14,
+                  borderBottomWidth: 14,
+                  borderRightWidth: 10,
+                  borderTopColor: 'transparent',
+                  borderBottomColor: 'transparent',
+                  borderRightColor: '#B45309',
+                }}
+              />
+              <View className="bg-amber-400 px-5 py-2 shadow-md">
+                <Text className="text-amber-900 text-xs font-extrabold tracking-widest">
+                  NEW HIGH SCORE
+                </Text>
+              </View>
+              <View
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderTopWidth: 14,
+                  borderBottomWidth: 14,
+                  borderLeftWidth: 10,
+                  borderTopColor: 'transparent',
+                  borderBottomColor: 'transparent',
+                  borderLeftColor: '#B45309',
+                }}
+              />
             </View>
+          </View>
+        )}
+
+        {/* Score */}
+        <View className="items-center pt-6 pb-2 px-6">
+          <Text className="text-slate-400 text-[11px] font-bold tracking-[2px] uppercase">
+            Final Score
+          </Text>
+          <Text className="text-indigo-900 text-6xl font-fredoka mt-1">
+            {score.toLocaleString()}
+          </Text>
+        </View>
+
+        {/* Stat row */}
+        <View
+          className="flex-row items-center justify-center px-6 pb-4"
+          style={{ gap: 14 }}
+        >
+          <View className="items-center flex-1">
+            <Text className="text-slate-400 text-[10px] uppercase tracking-wider">
+              Level
+            </Text>
+            <Text className="text-indigo-700 text-xl font-fredoka mt-0.5">
+              {level}
+            </Text>
+          </View>
+          <View className="w-px h-8 bg-slate-200" />
+          <View className="items-center flex-1">
+            <Text className="text-slate-400 text-[10px] uppercase tracking-wider">
+              Mode
+            </Text>
+            <Text className="text-indigo-700 text-base font-fredoka mt-0.5">
+              {modeLabel[mode] || mode}
+            </Text>
+          </View>
+          {rank !== null && (
+            <>
+              <View className="w-px h-8 bg-slate-200" />
+              <View className="items-center flex-1">
+                <Text className="text-slate-400 text-[10px] uppercase tracking-wider">
+                  Rank
+                </Text>
+                <View style={{ marginTop: 2 }}>
+                  <RankBadge rank={rank} size={24} />
+                </View>
+              </View>
+            </>
           )}
         </View>
 
-        {/* Score section */}
-        <View className="items-center pt-5 pb-3 px-6">
-          <Text className="text-slate-400 text-sm font-semibold tracking-wider uppercase">
-            Final Score
-          </Text>
-          <Text className="text-indigo-900 text-5xl font-fredoka mt-1">
-            {score.toLocaleString()}
-          </Text>
-
-          <View className="flex-row items-center mt-2" style={{ gap: 16 }}>
-            <View className="items-center">
-              <Text className="text-slate-400 text-[10px] uppercase">Level</Text>
-              <Text className="text-indigo-700 text-lg font-fredoka">{level}</Text>
-            </View>
-            <View className="w-px h-6 bg-slate-200" />
-            <View className="items-center">
-              <Text className="text-slate-400 text-[10px] uppercase">Mode</Text>
-              <Text className="text-indigo-700 text-sm font-fredoka">
-                {modeLabel[mode] || mode}
-              </Text>
-            </View>
-            {rank !== null && (
-              <>
-                <View className="w-px h-6 bg-slate-200" />
-                <View className="items-center">
-                  <Text className="text-slate-400 text-[10px] uppercase">Rank</Text>
-                  <View className="flex-row items-center">
-                    {rankMedal ? (
-                      <Text style={{ fontSize: 20 }}>{rankMedal}</Text>
-                    ) : (
-                      <Text className="text-indigo-700 text-lg font-fredoka">
-                        #{rank}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-
-        {/* Top scores list */}
+        {/* Top scores */}
         {recentScores.length > 0 && (
-          <View className="w-full px-5 pb-4">
-            <View className="bg-indigo-50/80 rounded-2xl p-3 border border-indigo-100">
-              <Text className="text-indigo-600 text-xs font-bold mb-2 text-center uppercase tracking-wider">
-                🏆 Top 5 — {modeLabel[mode] || mode}
+          <View className="px-5 pb-4">
+            <View className="bg-indigo-50 rounded-2xl p-3 border border-indigo-100">
+              <Text className="text-indigo-600 text-[11px] font-extrabold mb-2 text-center uppercase tracking-[2px]">
+                Top 5 — {modeLabel[mode] || mode}
               </Text>
               {recentScores.map((rec, idx) => {
                 const isCurrentScore = rec.score === score;
-                const medal =
-                  idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
                 return (
                   <View
                     key={rec.id}
                     className={`flex-row items-center py-2 px-2 rounded-xl ${
-                      isCurrentScore ? 'bg-amber-100/80' : ''
-                    } ${idx < recentScores.length - 1 ? 'border-b border-indigo-100' : ''}`}
+                      isCurrentScore ? 'bg-amber-100' : ''
+                    } ${
+                      idx < recentScores.length - 1
+                        ? 'border-b border-indigo-100'
+                        : ''
+                    }`}
                   >
-                    {medal ? (
-                      <Text style={{ fontSize: 16, width: 28 }}>{medal}</Text>
-                    ) : (
-                      <Text className="text-indigo-300 text-sm font-bold" style={{ width: 28 }}>
-                        #{idx + 1}
-                      </Text>
-                    )}
+                    <View style={{ width: 32, alignItems: 'flex-start' }}>
+                      <RankBadge rank={idx + 1} size={22} />
+                    </View>
                     <Text
                       className={`flex-1 text-base font-fredoka ${
-                        isCurrentScore ? 'text-amber-600' : 'text-indigo-900'
+                        isCurrentScore ? 'text-amber-700' : 'text-indigo-900'
                       }`}
                     >
                       {rec.score.toLocaleString()}
                     </Text>
-                    <Text className="text-slate-400 text-xs">Lv.{rec.level}</Text>
+                    <Text className="text-slate-400 text-xs font-semibold">
+                      Lv.{rec.level}
+                    </Text>
                   </View>
                 );
               })}
@@ -158,28 +244,41 @@ export default function GameOverOverlay() {
         )}
 
         {/* Buttons */}
-        <View className="w-full px-5 pb-6" style={{ gap: 10 }}>
+        <View className="px-5 pb-6" style={{ gap: 10 }}>
           <Pressable
             onPress={restart}
-            className="bg-sky-500 py-4 rounded-2xl active:bg-sky-600 w-full shadow-sm"
+            className="bg-sky-500 py-4 rounded-2xl active:bg-sky-600 shadow-sm"
           >
-            <Text className="text-white text-xl font-fredoka text-center">
-              🔄 Play Again
+            <Text className="text-white text-xl font-fredoka text-center tracking-wide">
+              Play Again
             </Text>
           </Pressable>
-          <Pressable
-            onPress={() => setViewingBoard(true)}
-            className="bg-indigo-500/10 py-3.5 rounded-2xl active:bg-indigo-500/20 w-full"
-          >
-            <Text className="text-indigo-600 text-lg font-fredoka text-center">
-              🔍 View Board
-            </Text>
-          </Pressable>
+          <View className="flex-row" style={{ gap: 10 }}>
+            <Pressable
+              onPress={() => setViewingBoard(true)}
+              className="flex-1 bg-indigo-50 py-3.5 rounded-2xl active:bg-indigo-100 border border-indigo-100"
+            >
+              <Text className="text-indigo-600 text-base font-fredoka text-center">
+                View Board
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                backToMenu();
+                router.push('/(tabs)/leaderboard');
+              }}
+              className="flex-1 bg-indigo-600 py-3.5 rounded-2xl active:bg-indigo-700"
+            >
+              <Text className="text-white text-base font-fredoka text-center">
+                Leaderboard
+              </Text>
+            </Pressable>
+          </View>
           <Pressable
             onPress={backToMenu}
-            className="bg-indigo-100 py-3.5 rounded-2xl active:bg-indigo-200 w-full"
+            className="py-3 active:opacity-60"
           >
-            <Text className="text-indigo-900 text-lg font-fredoka text-center">
+            <Text className="text-slate-500 text-sm font-fredoka text-center">
               Change Mode
             </Text>
           </Pressable>
